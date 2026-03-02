@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+venv/
+env/
+.venv/
+ENV/
+
+# Environment
+# .env  # included in zip for easy setup
+.env.local
+.env.production
+config/secrets.json
+
+# Database
+*.sqlite
+*.db
+mysql_dump.sql
+
+# ML Models (large binary files)
+ml_models/trained/*.pkl
+ml_models/trained/*.joblib
+ml_models/trained/*.h5
+!ml_models/trained/.gitkeep
+
+# Data files (sensitive/large)
+data_generation/*.csv
+exports/*.xlsx
+exports/*.csv
+reports/*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Coverage
+.coverage
+htmlcov/

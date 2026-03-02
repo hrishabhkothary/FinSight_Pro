@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FinSight Pro — Financial Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+:root {
+  --bg:        #060c14;
+  --surface:   #0b1521;
+  --surface2:  #111e2e;
+  --border:    rgba(255,255,255,0.07);
+  --gold:      #f5a623;
+  --teal:      #00d4aa;
+  --red:       #ff4757;
+  --blue:      #3e92fc;
+  --purple:    #a855f7;
+  --text:      #e2eaf5;
+  --muted:     #6b7e96;
+  --font-disp: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-body: 'Inter', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.brand {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-logo {
+  font-family: var(--font-disp);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: white;
+}
+
+.brand-logo span { color: var(--gold); }
+
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.25);
+  padding: 3px 8px; border-radius: 20px; font-size: 10px;
+  color: var(--teal); font-family: var(--font-mono); margin-top: 8px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--teal); animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+nav { padding: 16px 0; flex: 1; overflow-y: auto; }
+
+.nav-section {
+  padding: 8px 24px 4px;
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 24px; cursor: pointer;
+  transition: all 0.2s; color: var(--muted);
+  font-size: 13px; font-weight: 500;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+.nav-item.active {
+  color: var(--gold); border-left-color: var(--gold);
+  background: rgba(245,166,35,0.06);
+}
+
+.nav-icon { width: 16px; text-align: center; font-size: 14px; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+}
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+.status-dot.ok  { background: var(--teal); }
+.status-dot.err { background: var(--red); }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main {
+  flex: 1; overflow-y: auto;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+}
+
+.topbar {
+  padding: 20px 32px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 5;
+}
+
+.page-title {
+  font-family: var(--font-disp);
+  font-size: 20px; font-weight: 700; color: white;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.timeframe-select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 12px; border-radius: 8px;
+  font-size: 12px; font-family: var(--font-mono); cursor: pointer;
+}
+
+.btn {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  font-family: var(--font-body); transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+
+.btn-gold  { background: var(--gold); color: #000; }
+.btn-gold:hover { background: #ffc048; }
+.btn-teal  { background: rgba(0,212,170,0.15); color: var(--teal); border: 1px solid rgba(0,212,170,0.3); }
+.btn-teal:hover { background: rgba(0,212,170,0.25); }
+.btn-red   { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+.btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--muted); }
+
+.content { padding: 28px 32px; flex: 1; }
+
+/* ── VIEWS ───────────────────────────────────────────────── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── KPI CARDS ───────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.kpi-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); }
+
+.kpi-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent, var(--gold));
+}
+
+.kpi-label {
+  font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: var(--font-mono); margin-bottom: 10px;
+}
+
+.kpi-value {
+  font-family: var(--font-disp);
+  font-size: 28px; font-weight: 700; color: white;
+  line-height: 1;
+}
+
+.kpi-sub {
+  font-size: 11px; color: var(--muted); margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+.kpi-trend {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 10px; font-family: var(--font-mono); margin-top: 6px;
+}
+.kpi-trend.up { background: rgba(0,212,170,0.1); color: var(--teal); }
+.kpi-trend.dn { background: rgba(255,71,87,0.1); color: var(--red); }
+
+/* ── CHART GRID ─────────────────────────────────────────── */
+.chart-grid {
+  display: grid; gap: 20px;
+  grid-template-columns: repeat(12, 1fr);
+  margin-bottom: 28px;
+}
+.span-8  { grid-column: span 8; }
+.span-4  { grid-column: span 4; }
+.span-6  { grid-column: span 6; }
+.span-12 { grid-column: span 12; }
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px;
+}
+
+.chart-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.chart-title {
+  font-family: var(--font-disp);
+  font-size: 14px; font-weight: 600; color: white;
+}
+
+.chart-badge {
+  font-size: 9px; padding: 3px 8px; border-radius: 20px;
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px;
+  background: rgba(245,166,35,0.1); color: var(--gold);
+}
+
+canvas { max-height: 260px; }
+
+/* ── TABLE ───────────────────────────────────────────────── */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+
+.table-header {
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.table-title {
+  font-family: var(--font-disp); font-size: 14px; font-weight: 600; color: white;
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+thead th {
+  padding: 12px 16px; text-align: left;
+  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.15s;
+}
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+tbody td {
+  padding: 12px 16px; font-size: 12px; color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 10px; font-family: var(--font-mono);
+}
+.badge-success { background: rgba(0,212,170,0.1); color: var(--teal); }
+.badge-danger  { background: rgba(255,71,87,0.1); color: var(--red); }
+.badge-warn    { background: rgba(245,166,35,0.1); color: var(--gold); }
+.badge-info    { background: rgba(62,146,252,0.1); color: var(--blue); }
+.badge-purple  { background: rgba(168,85,247,0.1); color: var(--purple); }
+
+/* ── FORM / MODAL ────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: none; align-items: center; justify-content: center; z-index: 100;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 32px; width: 520px; max-width: 95vw;
+}
+
+.modal-title {
+  font-family: var(--font-disp); font-size: 18px; font-weight: 700;
+  color: white; margin-bottom: 20px;
+}
+
+.form-group { margin-bottom: 16px; }
+
+.form-label {
+  display: block; font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: var(--font-mono); margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%; padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font-mono);
+  font-size: 13px; transition: border-color 0.2s;
+}
+.form-input:focus { outline: none; border-color: var(--gold); }
+
+.form-select { appearance: none; cursor: pointer; }
+
+/* ── LIVE FEED TICKER ────────────────────────────────────── */
+.ticker-bar {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 32px;
+  display: flex; align-items: center; gap: 24px;
+  overflow: hidden; font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted);
+}
+.ticker-item { white-space: nowrap; }
+.ticker-item .val { color: var(--teal); font-weight: 500; }
+.ticker-item .dn  { color: var(--red); }
+
+/* ── UPLOAD ZONE ─────────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 14px;
+  padding: 48px 24px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: var(--surface);
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--gold); background: rgba(245,166,35,0.03); }
+.upload-icon { font-size: 40px; margin-bottom: 12px; }
+.upload-text { color: var(--muted); font-size: 13px; }
+.upload-text strong { color: var(--text); }
+
+/* ── ML PREDICTOR ────────────────────────────────────────── */
+.risk-meter {
+  height: 10px; border-radius: 5px; background: var(--surface2);
+  overflow: hidden; margin: 8px 0;
+}
+.risk-fill {
+  height: 100%; border-radius: 5px;
+  transition: width 0.5s ease; background: var(--teal);
+}
+.risk-fill.medium { background: var(--gold); }
+.risk-fill.high   { background: var(--red); }
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 12px 20px; border-radius: 10px; border-left: 4px solid;
+  background: var(--surface); font-size: 13px;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.success { border-color: var(--teal); }
+.toast.error   { border-color: var(--red); }
+.toast.warn    { border-color: var(--gold); }
+
+@keyframes slideIn { from { transform: translateX(80px); opacity: 0; } }
+
+/* ── LOADING ─────────────────────────────────────────────── */
+.spinner {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--gold);
+  animation: spin 0.8s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: absolute; inset: 0; background: rgba(6,12,20,0.8);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; z-index: 5;
+}
+
+/* ── HEATMAP ─────────────────────────────────────────────── */
+.heatmap-grid {
+  display: grid; grid-template-columns: 60px repeat(24, 1fr);
+  gap: 2px; margin-top: 8px;
+}
+.hm-cell {
+  height: 20px; border-radius: 3px;
+  background: var(--surface2); position: relative;
+  transition: all 0.2s; cursor: default;
+}
+.hm-cell:hover::after {
+  content: attr(data-tip); position: absolute; bottom: 110%;
+  left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 4px 8px; border-radius: 6px; font-size: 10px;
+  white-space: nowrap; z-index: 10; color: var(--text);
+  font-family: var(--font-mono);
+}
+.hm-label { font-size: 9px; color: var(--muted); line-height: 20px; font-family: var(--font-mono); }
+
+@media (max-width: 1200px) {
+  .span-8 { grid-column: span 12; }
+  .span-4 { grid-column: span 12; }
+  .span-6 { grid-column: span 12; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ───────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">Fin<span>Sight</span> Pro</div>
+    <div class="brand-sub">Financial Intelligence</div>
+    <div class="live-badge"><div class="live-dot"></div> Live Feed Active</div>
+  </div>
+  
+  <nav>
+    <div class="nav-section">Analytics</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">◈</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('fraud')">
+      <span class="nav-icon">⚑</span> Fraud Intelligence
+    </div>
+    <div class="nav-item" onclick="navigate('customers')">
+      <span class="nav-icon">◎</span> Customer 360
+    </div>
+    <div class="nav-item" onclick="navigate('investments')">
+      <span class="nav-icon">◈</span> Investments
+    </div>
+    <div class="nav-item" onclick="navigate('platforms')">
+      <span class="nav-icon">▦</span> Platform Analytics
+    </div>
+    
+    <div class="nav-section" style="margin-top:12px;">AI / ML</div>
+    <div class="nav-item" onclick="navigate('ml')">
+      <span class="nav-icon">⬡</span> ML Models
+    </div>
+    <div class="nav-item" onclick="navigate('predictor')">
+      <span class="nav-icon">◌</span> Fraud Predictor
+    </div>
+    
+    <div class="nav-section" style="margin-top:12px;">Data</div>
+    <div class="nav-item" onclick="navigate('upload')">
+      <span class="nav-icon">↑</span> Upload Data
+    </div>
+    <div class="nav-item" onclick="navigate('exports')">
+      <span class="nav-icon">↓</span> Export Reports
+    </div>
+  </nav>
+  
+  <div class="sidebar-footer">
+    <div id="db-status"><span class="status-dot ok"></span>DB Connected</div>
+    <div style="margin-top:4px; font-size:10px;">v2.0 · Razorpay · JusPay · Upstox</div>
+  </div>
+</aside>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────────────── -->
+<main class="main">
+  <!-- Ticker -->
+  <div class="ticker-bar" id="ticker">
+    <div class="ticker-item">LIVE · <span class="val" id="tick-txns">—</span> txns/hr</div>
+    <div class="ticker-item">VOL · ₹<span class="val" id="tick-vol">—</span></div>
+    <div class="ticker-item">FRAUD RATE · <span class="val" id="tick-fr">—</span>%</div>
+    <div class="ticker-item" id="tick-live">◌ Waiting for live feed...</div>
+  </div>
+  
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <select class="timeframe-select" id="timeframe" onchange="refreshDashboard()">
+        <option value="7">7 Days</option>
+        <option value="30" selected>30 Days</option>
+        <option value="90">90 Days</option>
+        <option value="365">1 Year</option>
+      </select>
+      <button class="btn btn-ghost" onclick="refreshAll()">⟳ Refresh</button>
+      <button class="btn btn-gold" onclick="openModal('export-modal')">↓ Export</button>
+    </div>
+  </div>
+
+  <!-- ── VIEWS ──────────────────────────────────────────────────────────── -->
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view active">
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card" style="--accent:var(--gold)">
+          <div class="kpi-label">Total Transactions</div>
+          <div class="kpi-value" id="kpi-txns">—</div>
+          <div class="kpi-trend up" id="kpi-txns-t">Loading...</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--teal)">
+          <div class="kpi-label">Total Volume</div>
+          <div class="kpi-value" id="kpi-vol">—</div>
+          <div class="kpi-sub">INR</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--red)">
+          <div class="kpi-label">Fraud Rate</div>
+          <div class="kpi-value" id="kpi-fraud">—</div>
+          <div class="kpi-sub">% of transactions</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--blue)">
+          <div class="kpi-label">Success Rate</div>
+          <div class="kpi-value" id="kpi-success">—</div>
+          <div class="kpi-sub">% successful</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--purple)">
+          <div class="kpi-label">Unique Customers</div>
+          <div class="kpi-value" id="kpi-customers">—</div>
+          <div class="kpi-sub">Active users</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--gold)">
+          <div class="kpi-label">Total Fees</div>
+          <div class="kpi-value" id="kpi-fees">—</div>
+          <div class="kpi-sub">INR revenue</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--teal)">
+          <div class="kpi-label">Avg Latency</div>
+          <div class="kpi-value" id="kpi-latency">—</div>
+          <div class="kpi-sub">milliseconds</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--red)">
+          <div class="kpi-label">Fraud Alerts</div>
+          <div class="kpi-value" id="kpi-fraud-count">—</div>
+          <div class="kpi-sub">Flagged transactions</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card span-8">
+          <div class="chart-header">
+            <div class="chart-title">Transaction Volume Trend</div>
+            <div class="chart-badge">Daily</div>
+          </div>
+          <canvas id="chart-trend"></canvas>
+        </div>
+        <div class="chart-card span-4">
+          <div class="chart-header">
+            <div class="chart-title">Transaction Types</div>
+            <div class="chart-badge">Split</div>
+          </div>
+          <canvas id="chart-types"></canvas>
+        </div>
+        <div class="chart-card span-6">
+          <div class="chart-header">
+            <div class="chart-title">Platform Performance</div>
+            <div class="chart-badge">Volume INR</div>
+          </div>
+          <canvas id="chart-platforms"></canvas>
+        </div>
+        <div class="chart-card span-6">
+          <div class="chart-header">
+            <div class="chart-title">Customer Risk Distribution</div>
+            <div class="chart-badge">Segments</div>
+          </div>
+          <canvas id="chart-risk"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAUD INTELLIGENCE -->
+    <div id="view-fraud" class="view">
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--accent:var(--red)">
+          <div class="kpi-label">Fraud Funnel</div>
+          <div class="kpi-value" id="frd-total">—</div>
+          <div class="kpi-sub">Total flagged</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--gold)">
+          <div class="kpi-label">Confirmed Fraud</div>
+          <div class="kpi-value" id="frd-confirmed">—</div>
+          <div class="kpi-sub">Confirmed cases</div>
+        </div>
+      </div>
+      
+      <div class="chart-grid">
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Fraud Funnel</div></div>
+          <canvas id="chart-fraud-funnel"></canvas>
+        </div>
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Hourly Fraud Heatmap</div></div>
+          <div id="fraud-heatmap" style="height:260px; overflow-y:auto;"></div>
+        </div>
+        <div class="chart-card span-12">
+          <div class="chart-header">
+            <div class="chart-title">Top Fraud Merchants</div>
+          </div>
+          <div id="fraud-merchants-table" style="overflow-x:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER 360 -->
+    <div id="view-customers" class="view">
+      <div class="chart-grid">
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Customer Segments</div></div>
+          <canvas id="chart-segments"></canvas>
+        </div>
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Geographic Volume</div></div>
+          <canvas id="chart-geo"></canvas>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:20px;">
+        <div class="table-header">
+          <div class="table-title">Top Customers by Lifetime Value</div>
+          <button class="btn btn-ghost" onclick="loadTopCustomers()">⟳ Refresh</button>
+        </div>
+        <div style="overflow-x:auto;" id="top-customers-table"></div>
+      </div>
+    </div>
+
+    <!-- INVESTMENTS -->
+    <div id="view-investments" class="view">
+      <div class="chart-grid">
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Portfolio by Asset Class</div></div>
+          <canvas id="chart-asset-class"></canvas>
+        </div>
+        <div class="chart-card span-6">
+          <div class="chart-header"><div class="chart-title">Sector Allocation</div></div>
+          <canvas id="chart-sector"></canvas>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:20px;">
+        <div class="table-header"><div class="table-title">Top Equity Positions</div></div>
+        <div id="top-stocks-table" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+
+    <!-- PLATFORMS -->
+    <div id="view-platforms" class="view">
+      <div id="platforms-table-wrap" class="table-wrap">
+        <div class="table-header"><div class="table-title">Platform KPI Matrix</div></div>
+        <div id="platforms-table" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+
+    <!-- ML MODELS -->
+    <div id="view-ml" class="view">
+      <div id="ml-models-grid" class="kpi-grid"></div>
+    </div>
+
+    <!-- FRAUD PREDICTOR -->
+    <div id="view-predictor" class="view">
+      <div style="max-width:600px;">
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:20px;">Real-Time Fraud Prediction</div>
+          <div class="form-group">
+            <label class="form-label">Transaction Amount (INR)</label>
+            <input class="form-input" id="pred-amount" type="number" placeholder="50000" value="50000"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hour of Day (0–23)</label>
+            <input class="form-input" id="pred-hour" type="number" placeholder="14" value="14"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Latency (ms)</label>
+            <input class="form-input" id="pred-latency" type="number" placeholder="300" value="300"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Credit Score</label>
+            <input class="form-input" id="pred-credit" type="number" placeholder="720" value="720"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Annual Income (INR)</label>
+            <input class="form-input" id="pred-income" type="number" placeholder="800000" value="800000"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Foreign IP?</label>
+            <select class="form-input form-select" id="pred-foreign">
+              <option value="0">No (India)</option>
+              <option value="1">Yes (Foreign)</option>
+            </select>
+          </div>
+          <button class="btn btn-gold" style="width:100%; margin-top:8px; justify-content:center;" onclick="predictFraud()">
+            ⬡ Analyze Transaction
+          </button>
+          
+          <div id="prediction-result" style="margin-top:24px; display:none;">
+            <div class="kpi-label" style="margin-bottom:8px;">Fraud Probability</div>
+            <div class="risk-meter"><div class="risk-fill" id="risk-fill"></div></div>
+            <div style="display:flex; justify-content:space-between; margin-top:8px;">
+              <div class="kpi-value" id="pred-prob">—</div>
+              <div id="pred-label" class="badge">—</div>
+            </div>
+            <div id="pred-detail" style="margin-top:12px; color:var(--muted); font-family:var(--font-mono); font-size:11px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD DATA -->
+    <div id="view-upload" class="view">
+      <div style="max-width:700px;">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleDrop(event)">
+          <div class="upload-icon">⬆</div>
+          <div class="upload-text"><strong>Drop CSV / XLSX here</strong> or click to browse</div>
+          <div style="margin-top:8px; color:var(--muted); font-size:11px; font-family:var(--font-mono);">Supported: transactions, customers, portfolios</div>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFileSelect(this)"/>
+        
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Target Table</label>
+          <select class="form-input form-select" id="upload-table">
+            <option value="transactions">transactions</option>
+            <option value="customers">customers</option>
+            <option value="portfolios">portfolios</option>
+            <option value="market_data">market_data</option>
+          </select>
+        </div>
+        <button class="btn btn-gold" onclick="uploadFile()" id="upload-btn" style="margin-top:8px;">↑ Upload to Database</button>
+        <div id="upload-status" style="margin-top:16px; font-family:var(--font-mono); font-size:12px; color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- EXPORTS -->
+    <div id="view-exports" class="view">
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px;">
+        <div class="chart-card">
+          <div class="chart-title">Transaction Report</div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0;">Full transaction detail with customer & platform join</p>
+          <button class="btn btn-teal" onclick="exportExcel('transactions')">↓ Export Excel</button>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Platform KPI Report</div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0;">Cross-platform performance matrix & KPIs</p>
+          <button class="btn btn-teal" onclick="exportExcel('platforms')">↓ Export Excel</button>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Customer Report</div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0;">Customer 360 view with portfolio & churn risk</p>
+          <button class="btn btn-teal" onclick="exportExcel('customers')">↓ Export Excel</button>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Investment Report</div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0;">Portfolio positions across Upstox, Zerodha, Groww</p>
+          <button class="btn btn-teal" onclick="exportExcel('investments')">↓ Export Excel</button>
+        </div>
+        <div class="chart-card" style="--accent:var(--red);">
+          <div class="chart-title">Executive PDF Report</div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0;">C-suite level PDF with KPIs, platform table & insights</p>
+          <button class="btn btn-red" onclick="exportPDF()">↓ Export PDF</button>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <div class="form-group" style="max-width:200px;">
+          <label class="form-label">Date Range (Days)</label>
+          <select class="form-input form-select" id="export-days">
+            <option value="7">Last 7 Days</option>
+            <option value="30" selected>Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+            <option value="365">Last Year</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <div class="modal-title">Export Data</div>
+    <div style="display:grid; gap:12px;">
+      <button class="btn btn-teal" onclick="exportExcel('transactions'); closeModal('export-modal')">↓ Transactions Excel</button>
+      <button class="btn btn-teal" onclick="exportExcel('platforms'); closeModal('export-modal')">↓ Platforms Excel</button>
+      <button class="btn btn-teal" onclick="exportExcel('customers'); closeModal('export-modal')">↓ Customers Excel</button>
+      <button class="btn btn-red"  onclick="exportPDF(); closeModal('export-modal')">↓ Executive PDF Report</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:16px; width:100%;" onclick="closeModal('export-modal')">Cancel</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API = '';  // same origin
+const CHARTS = {};
+let selectedFile = null;
+
+// ── Navigation ────────────────────────────────────────────────
+const TITLES = {
+  dashboard:'Dashboard', fraud:'Fraud Intelligence', customers:'Customer 360',
+  investments:'Investments', platforms:'Platform Analytics', ml:'ML Models',
+  predictor:'Fraud Predictor', upload:'Upload Data', exports:'Export Reports'
+};
+
+function navigate(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  event?.currentTarget?.classList.add('active');
+  document.getElementById('page-title').textContent = TITLES[view] || view;
+
+  const loaders = {
+    dashboard:   () => { loadKPIs(); loadTrend(); loadTxnTypes(); loadPlatformChart(); loadRiskChart(); },
+    fraud:       () => { loadFraudFunnel(); loadFraudHeatmap(); loadFraudMerchants(); },
+    customers:   () => { loadSegments(); loadGeo(); loadTopCustomers(); },
+    investments: () => { loadInvestments(); loadTopStocks(); },
+    platforms:   () => loadPlatforms(),
+    ml:          () => loadMLModels(),
+  };
+  loaders[view]?.();
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
+);
+
+// ── Chart helpers ─────────────────────────────────────────────
+const PALETTE = ['#f5a623','#00d4aa','#3e92fc','#a855f7','#ff4757','#ff6b35','#1dd1a1','#54a0ff','#5f27cd','#ff9f43'];
+const GRID_COLOR = 'rgba(255,255,255,0.05)';
+const TEXT_COLOR = '#6b7e96';
+
+const baseOpts = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: { legend: { labels: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 10 } } } },
+  scales: {
+    x: { grid: { color: GRID_COLOR }, ticks: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 10 } } },
+    y: { grid: { color: GRID_COLOR }, ticks: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 10 } } },
+  }
+};
+
+function makeChart(id, config) {
+  if (CHARTS[id]) CHARTS[id].destroy();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  CHARTS[id] = new Chart(ctx, config);
+  return CHARTS[id];
+}
+
+function fmt(n) {
+  if (n >= 1e7)  return (n/1e7).toFixed(1) + 'Cr';
+  if (n >= 1e5)  return (n/1e5).toFixed(1) + 'L';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return Number(n).toFixed(0);
+}
+
+// ── API fetcher ───────────────────────────────────────────────
+async function apiFetch(url) {
+  try {
+    const r = await fetch(API + url);
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e) {
+    toast(`API error: ${url}`, 'error');
+    return null;
+  }
+}
+
+// ── KPIs ──────────────────────────────────────────────────────
+async function loadKPIs() {
+  const days = document.getElementById('timeframe').value;
+  const d = await apiFetch(`/api/kpis?days=${days}`);
+  if (!d) return;
+  document.getElementById('kpi-txns').textContent    = fmt(d.total_txns);
+  document.getElementById('kpi-vol').textContent     = '₹' + fmt(d.total_volume);
+  document.getElementById('kpi-fraud').textContent   = d.fraud_rate.toFixed(3) + '%';
+  document.getElementById('kpi-success').textContent = d.success_rate.toFixed(1) + '%';
+  document.getElementById('kpi-customers').textContent = fmt(d.unique_customers);
+  document.getElementById('kpi-fees').textContent    = '₹' + fmt(d.total_fees);
+  document.getElementById('kpi-latency').textContent = Math.round(d.avg_latency) + 'ms';
+  document.getElementById('kpi-fraud-count').textContent = fmt(d.fraud_count);
+  document.getElementById('kpi-txns-t').textContent  = `Last ${days} days`;
+}
+
+async function loadTrend() {
+  const days = document.getElementById('timeframe').value;
+  const d = await apiFetch(`/api/trend/daily?days=${days}`);
+  if (!d || !d.length) return;
+  makeChart('chart-trend', {
+    type: 'line',
+    data: {
+      labels: d.map(r => r.date?.slice(5)),
+      datasets: [
+        { label: 'Volume (INR)', data: d.map(r => r.volume), borderColor: '#f5a623',
+          backgroundColor: 'rgba(245,166,35,0.1)', fill: true, tension: 0.4, yAxisID: 'y' },
+        { label: 'Transactions', data: d.map(r => r.txn_count), borderColor: '#00d4aa',
+          fill: false, tension: 0.4, yAxisID: 'y1' },
+      ]
+    },
+    options: { ...baseOpts, scales: {
+      x: { grid:{color:GRID_COLOR}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+      y:  { grid:{color:GRID_COLOR}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+      y1: { position:'right', grid:{display:false}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+    }}
+  });
+}
+
+async function loadTxnTypes() {
+  const d = await apiFetch('/api/charts/txn_types');
+  if (!d || !d.length) return;
+  makeChart('chart-types', {
+    type: 'doughnut',
+    data: { labels: d.map(r=>r.txn_type), datasets: [{ data: d.map(r=>r.count), backgroundColor: PALETTE, borderWidth: 0 }] },
+    options: { ...baseOpts, cutout: '65%', scales: {} }
+  });
+}
+
+async function loadPlatformChart() {
+  const d = await apiFetch('/api/platforms');
+  if (!d || !d.length) return;
+  makeChart('chart-platforms', {
+    type: 'bar',
+    data: {
+      labels: d.map(r=>r.platform_name),
+      datasets: [
+        { label: 'Volume INR', data: d.map(r=>r.total_volume_inr), backgroundColor: '#f5a623', yAxisID:'y' },
+        { label: 'Fraud%', data: d.map(r=>r.fraud_rate_pct), backgroundColor: 'rgba(255,71,87,0.7)', yAxisID:'y1' },
+      ]
+    },
+    options: { ...baseOpts, scales: {
+      x: { grid:{color:GRID_COLOR}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+      y:  { grid:{color:GRID_COLOR}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+      y1: { position:'right', grid:{display:false}, ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}} },
+    }}
+  });
+}
+
+async function loadRiskChart() {
+  const d = await apiFetch('/api/charts/risk_distribution');
+  if (!d || !d.length) return;
+  const groups = {};
+  d.forEach(r => { groups[r.risk_tier] = (groups[r.risk_tier]||0) + r.count; });
+  makeChart('chart-risk', {
+    type: 'pie',
+    data: { labels: Object.keys(groups), datasets: [{
+      data: Object.values(groups),
+      backgroundColor: ['#00d4aa','#f5a623','#ff9f43','#ff4757'],
+      borderWidth: 0
+    }]},
+    options: { ...baseOpts, scales: {} }
+  });
+}
+
+// ── Fraud ─────────────────────────────────────────────────────
+async function loadFraudFunnel() {
+  const d = await apiFetch('/api/fraud/summary');
+  if (!d || !d.length) return;
+  document.getElementById('frd-total').textContent     = fmt(d[0]?.count || 0);
+  document.getElementById('frd-confirmed').textContent = fmt(d[2]?.count || 0);
+  makeChart('chart-fraud-funnel', {
+    type: 'bar',
+    data: {
+      labels: d.map(r=>r.stage),
+      datasets: [{ label:'Count', data: d.map(r=>r.count), backgroundColor: PALETTE, borderRadius:6 }]
+    },
+    options: { ...baseOpts, indexAxis:'y', scales:{
+      x:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}},
+      y:{grid:{display:false},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}}
+    }}
+  });
+}
+
+async function loadFraudHeatmap() {
+  const d = await apiFetch('/api/fraud/heatmap');
+  if (!d || !d.length) return;
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const maxFr = Math.max(...d.map(r=>r.fraud_rate||0));
+  const container = document.getElementById('fraud-heatmap');
+  
+  let html = '<div class="heatmap-grid">';
+  // Header row
+  html += '<div class="hm-label"></div>';
+  for(let h=0;h<24;h++) html += `<div class="hm-label" style="font-size:8px;text-align:center">${h}</div>`;
+  
+  for(let day=1;day<=7;day++) {
+    html += `<div class="hm-label">${DAYS[day-1]}</div>`;
+    for(let hour=0;hour<24;hour++) {
+      const cell = d.find(r=>r.day_of_week==day && r.hour_of_day==hour);
+      const fr = cell ? cell.fraud_rate : 0;
+      const intensity = maxFr > 0 ? fr/maxFr : 0;
+      const r = Math.round(255*intensity), g = Math.round(71*(1-intensity)), b = Math.round(87*(1-intensity));
+      html += `<div class="hm-cell" style="background:rgba(${r},${g},${b},${0.2+intensity*0.8})"
+               data-tip="${DAYS[day-1]} ${hour}h: ${fr.toFixed(3)}% fraud"></div>`;
+    }
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function loadFraudMerchants() {
+  const d = await apiFetch('/api/fraud/top_merchants');
+  if (!d || !d.length) return;
+  const el = document.getElementById('fraud-merchants-table');
+  el.innerHTML = renderTable(d, ['merchant_name','merchant_category','fraud_txns','fraud_volume']);
+}
+
+// ── Customers ─────────────────────────────────────────────────
+async function loadSegments() {
+  const d = await apiFetch('/api/customers/segments');
+  if (!d || !d.length) return;
+  const segs = [...new Set(d.map(r=>r.segment))];
+  const datasets = segs.map((s,i) => ({
+    label: s, data: d.filter(r=>r.segment===s).map(r=>r.count),
+    backgroundColor: PALETTE[i], borderRadius: 4
+  }));
+  const tiers = [...new Set(d.map(r=>r.risk_tier))];
+  makeChart('chart-segments', {
+    type:'bar', data:{ labels:tiers, datasets },
+    options:{...baseOpts, scales:{
+      x:{stacked:true,grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}},
+      y:{stacked:true,grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}}
+    }}
+  });
+}
+
+async function loadGeo() {
+  const d = await apiFetch('/api/charts/geographic');
+  if (!d || !d.length) return;
+  makeChart('chart-geo', {
+    type: 'bar',
+    data: {
+      labels: d.slice(0,15).map(r=>r.city),
+      datasets: [{ label:'Volume INR', data: d.slice(0,15).map(r=>r.volume),
+        backgroundColor: PALETTE, borderRadius: 4 }]
+    },
+    options: {...baseOpts, indexAxis:'y', scales:{
+      x:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}},
+      y:{grid:{display:false},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}}
+    }}
+  });
+}
+
+async function loadTopCustomers() {
+  const d = await apiFetch('/api/customers/top?limit=20');
+  if (!d || !d.length) return;
+  document.getElementById('top-customers-table').innerHTML =
+    renderTable(d, ['customer_id','name','segment','city','risk_tier','lifetime_value','total_txns','portfolio_value','fraud_incidents']);
+}
+
+// ── Investments ───────────────────────────────────────────────
+async function loadInvestments() {
+  const d = await apiFetch('/api/investments/summary');
+  if (!d || !d.length) return;
+  const assets = [...new Set(d.map(r=>r.asset_class))];
+  const grouped = {};
+  d.forEach(r => { grouped[r.asset_class] = (grouped[r.asset_class]||0) + (r.total_invested||0); });
+  makeChart('chart-asset-class', {
+    type:'doughnut',
+    data:{ labels:Object.keys(grouped), datasets:[{ data:Object.values(grouped), backgroundColor:PALETTE, borderWidth:0 }]},
+    options:{...baseOpts, cutout:'60%', scales:{}}
+  });
+  
+  const sectors = {};
+  d.forEach(r => { sectors[r.sector] = (sectors[r.sector]||0) + (r.total_invested||0); });
+  makeChart('chart-sector', {
+    type:'bar',
+    data:{ labels:Object.keys(sectors), datasets:[{ label:'Invested', data:Object.values(sectors), backgroundColor:PALETTE, borderRadius:4 }]},
+    options:{...baseOpts, scales:{
+      x:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}},
+      y:{grid:{color:GRID_COLOR},ticks:{color:TEXT_COLOR,font:{family:'DM Mono',size:9}}}
+    }}
+  });
+}
+
+async function loadTopStocks() {
+  const d = await apiFetch('/api/investments/topstocks');
+  if (!d || !d.length) return;
+  document.getElementById('top-stocks-table').innerHTML =
+    renderTable(d, ['symbol','company_name','sector','exchange','total_qty','avg_cost','avg_curr_price','total_pnl','avg_pnl_pct']);
+}
+
+// ── Platforms ─────────────────────────────────────────────────
+async function loadPlatforms() {
+  const d = await apiFetch('/api/platforms');
+  if (!d || !d.length) return;
+  document.getElementById('platforms-table').innerHTML =
+    renderTable(d, ['platform_name','platform_type','total_txns','total_volume_inr','success_rate_pct','fraud_rate_pct','avg_latency_ms','unique_customers','total_fees']);
+}
+
+// ── ML Models ─────────────────────────────────────────────────
+async function loadMLModels() {
+  const d = await apiFetch('/api/ml/models_info');
+  const container = document.getElementById('ml-models-grid');
+  if (!d || Object.keys(d).length === 0) {
+    container.innerHTML = '<div style="color:var(--muted); font-family:var(--font-mono); padding:20px;">No models loaded. Run: <code style="color:var(--gold)">python ml_models/scripts/train_models.py</code></div>';
+    return;
+  }
+  const COLORS = {fraud:'var(--red)', churn:'var(--purple)', risk:'var(--blue)', anomaly:'var(--gold)'};
+  const ICONS  = {fraud:'⚑', churn:'◌', risk:'◈', anomaly:'⬡'};
+  container.innerHTML = Object.entries(d).map(([name, info]) => `
+    <div class="kpi-card" style="--accent:${COLORS[name]||'var(--teal)'}">
+      <div class="kpi-label">${ICONS[name]||'◎'} ${name.toUpperCase()} MODEL</div>
+      <div class="kpi-value" style="font-size:20px;">${info.auc_roc !== 'N/A' ? (+info.auc_roc).toFixed(4) : '—'}</div>
+      <div class="kpi-sub">AUC-ROC Score</div>
+      <div style="margin-top:10px; font-size:10px; color:var(--muted); font-family:var(--font-mono);">
+        ${info.version} · ${info.trained_at?.slice(0,10)||'—'}<br>
+        <span class="badge badge-success" style="margin-top:4px;">Loaded</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Fraud Predictor ───────────────────────────────────────────
+async function predictFraud() {
+  const payload = {
+    amount_inr:   +document.getElementById('pred-amount').value,
+    txn_hour:     +document.getElementById('pred-hour').value,
+    latency_ms:   +document.getElementById('pred-latency').value,
+    credit_score: +document.getElementById('pred-credit').value,
+    annual_income:+document.getElementById('pred-income').value,
+    foreign_ip:   +document.getElementById('pred-foreign').value,
+  };
+  
+  const r = await fetch(API + '/api/ml/predict_fraud', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  
+  if (!r.ok) { toast('Model not loaded. Train models first.', 'error'); return; }
+  
+  const d = await r.json();
+  const pct = Math.round(d.fraud_probability * 100);
+  
+  document.getElementById('prediction-result').style.display = 'block';
+  document.getElementById('pred-prob').textContent = (d.fraud_probability * 100).toFixed(2) + '%';
+  
+  const fill = document.getElementById('risk-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'risk-fill' + (pct > 70 ? ' high' : pct > 40 ? ' medium' : '');
+  
+  const label = document.getElementById('pred-label');
+  label.textContent = d.label;
+  label.className = 'badge ' + (d.label === 'FRAUD' ? 'badge-danger' : 'badge-success');
+  
+  document.getElementById('pred-detail').textContent =
+    `Risk: ${d.risk_level} · Model: ${d.model_version}`;
+}
+
+// ── Table renderer ────────────────────────────────────────────
+function renderTable(data, cols) {
+  if (!data || !data.length) return '<div style="padding:24px; color:var(--muted); font-family:var(--font-mono);">No data</div>';
+  const headers = cols || Object.keys(data[0]);
+  const fmtCell = (val, col) => {
+    if (val === null || val === undefined) return '<td>—</td>';
+    const v = String(val);
+    if (['status','kyc_status'].includes(col)) {
+      const cls = {'SUCCESS':'success','FAILED':'danger','REFUNDED':'warn','FLAGGED':'danger','Verified':'success','Pending':'warn','Rejected':'danger'}[v] || 'info';
+      return `<td><span class="badge badge-${cls}">${v}</span></td>`;
+    }
+    if (['risk_tier'].includes(col)) {
+      const cls = {'Low':'success','Medium':'warn','High':'danger','Critical':'danger'}[v]||'info';
+      return `<td><span class="badge badge-${cls}">${v}</span></td>`;
+    }
+    if (['is_fraud'].includes(col)) {
+      return `<td><span class="badge ${+v?'badge-danger':'badge-success'}">${+v?'YES':'NO'}</span></td>`;
+    }
+    if (['lifetime_value','total_volume','total_volume_inr','portfolio_value','fraud_volume',
+         'total_invested','total_pnl','total_fees','avg_txn_amount','avg_cost','avg_curr_price'].includes(col)) {
+      return `<td>₹${(+val||0).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>`;
+    }
+    if (['fraud_rate_pct','success_rate_pct','avg_return_pct','avg_pnl_pct'].includes(col)) {
+      const cls = col.includes('fraud') ? (parseFloat(v)>2 ? 'badge-danger':'badge-success') : '';
+      return `<td class="${cls}">${parseFloat(v||0).toFixed(2)}%</td>`;
+    }
+    return `<td>${v}</td>`;
+  };
+  
+  return `<table>
+    <thead><tr>${headers.map(h=>`<th>${h.replace(/_/g,' ')}</th>`).join('')}</tr></thead>
+    <tbody>${data.map(row=>`<tr>${headers.map(col=>fmtCell(row[col],col)).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── Export ────────────────────────────────────────────────────
+function exportExcel(type) {
+  const days = document.getElementById('export-days')?.value || 30;
+  window.open(`${API}/api/export/excel?type=${type}&days=${days}`, '_blank');
+  toast(`Exporting ${type} Excel...`, 'success');
+}
+function exportPDF() {
+  window.open(`${API}/api/export/pdf`, '_blank');
+  toast('Generating PDF report...', 'success');
+}
+
+// ── Upload ────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  selectedFile = e.dataTransfer.files[0];
+  document.getElementById('upload-status').textContent = `Selected: ${selectedFile.name}`;
+}
+function handleFileSelect(input) {
+  selectedFile = input.files[0];
+  document.getElementById('upload-status').textContent = `Selected: ${selectedFile.name}`;
+}
+async function uploadFile() {
+  if (!selectedFile) { toast('Please select a file first', 'warn'); return; }
+  const table = document.getElementById('upload-table').value;
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+  fd.append('table', table);
+  
+  document.getElementById('upload-btn').textContent = 'Uploading...';
+  document.getElementById('upload-btn').disabled = true;
+  
+  try {
+    const r = await fetch(API + '/api/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (r.ok) {
+      toast(`Inserted ${d.inserted} rows into ${d.table}`, 'success');
+      document.getElementById('upload-status').textContent = `✓ Inserted ${d.inserted} rows into "${table}"`;
+    } else {
+      toast(d.error || 'Upload failed', 'error');
+    }
+  } catch(e) {
+    toast('Upload error: ' + e.message, 'error');
+  }
+  document.getElementById('upload-btn').textContent = '↑ Upload to Database';
+  document.getElementById('upload-btn').disabled = false;
+}
+
+// ── WebSocket Live Feed ───────────────────────────────────────
+const socket = io(window.location.origin);
+socket.on('connected', (d) => console.log('WS:', d.message));
+socket.on('live_kpi', (d) => {
+  document.getElementById('tick-txns').textContent = d.txns_last_hour?.toLocaleString() || '—';
+  document.getElementById('tick-vol').textContent  = fmt(d.volume_last_hour || 0);
+  document.getElementById('tick-fr').textContent   = (d.fraud_rate_last_hour||0).toFixed(3);
+  if (d.live_txn) {
+    const t = d.live_txn;
+    const cls = t.status === 'SUCCESS' ? 'val' : 'dn';
+    document.getElementById('tick-live').innerHTML =
+      `◉ Live: <span class="${cls}">₹${t.amount.toLocaleString('en-IN',{maximumFractionDigits:0})}</span> · ${t.platform} · ${t.type} · <span class="${cls}">${t.status}</span>`;
+  }
+});
+
+// ── Helpers ───────────────────────────────────────────────────
+function refreshDashboard() {
+  const v = document.querySelector('.view.active')?.id?.replace('view-','');
+  if (v) navigate(v);
+}
+function refreshAll() { refreshDashboard(); toast('Data refreshed', 'success'); }
+
+// ── Health Check ──────────────────────────────────────────────
+async function checkHealth() {
+  const d = await apiFetch('/api/health');
+  const dot = document.querySelector('#db-status .status-dot');
+  if (d && d.db === 'connected') {
+    dot.className = 'status-dot ok';
+    document.getElementById('db-status').innerHTML = '<span class="status-dot ok"></span>DB Connected';
+  } else {
+    dot.className = 'status-dot err';
+    document.getElementById('db-status').innerHTML = '<span class="status-dot err"></span>DB Error';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+checkHealth();
+navigate('dashboard');
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+# FinSight Pro - Industrial Financial Intelligence Platform
+# Core Framework
+flask==3.0.3
+flask-cors==4.0.0
+flask-socketio==5.3.6
+python-socketio==5.11.3
+
+# Data Processing
+pandas==2.2.2
+numpy==1.26.4
+scipy==1.13.0
+
+# Database
+mysql-connector-python==8.4.0
+SQLAlchemy==2.0.30
+pymysql==1.1.0
+
+# Machine Learning
+scikit-learn==1.4.2
+xgboost==2.0.3
+lightgbm==4.3.0
+imbalanced-learn==0.12.3
+joblib==1.4.0
+
+# Visualization
+matplotlib==3.8.4
+seaborn==0.13.2
+plotly==5.22.0
+kaleido==0.2.1
+
+# Financial Data
+yfinance==0.2.38
+alpha-vantage==2.3.1
+requests==2.31.0
+
+# Report Generation
+reportlab==4.2.0
+fpdf2==2.7.9
+openpyxl==3.1.2
+xlsxwriter==3.2.0
+
+# Utilities
+python-dotenv==1.0.1
+schedule==1.2.1
+faker==24.9.0
+tqdm==4.66.4
+colorama==0.4.6
+pydantic==2.7.1
+loguru==0.7.2
+apscheduler==3.10.4
+Werkzeug==3.0.3
+gunicorn==22.0.0
+eventlet==0.36.1

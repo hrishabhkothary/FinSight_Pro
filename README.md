@@ -60,7 +60,7 @@ python run.py
 
 ## Full Documentation
 
-See `FinSight_Pro_Full_Documentation.pdf` for complete setup guide, tech stack explanation, SQL features, ML model details, interview preparation, and enterprise usage instructions.
+See `FinSight_Pro_Master_Documentation.pdf` and 'FinSight_Pro_Setup_Guide.pdf' for complete setup guide, tech stack explanation, SQL features, ML model details, and enterprise usage instructions.
 
 ---
 
